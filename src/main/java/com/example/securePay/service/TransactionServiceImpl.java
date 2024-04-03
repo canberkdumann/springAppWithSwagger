@@ -1,0 +1,102 @@
+package com.example.securePay.service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+
+import com.example.securePay.exception.TransactionException;
+import com.example.securePay.model.Transaction;
+import com.example.securePay.model.TransactionDTO;
+import com.example.securePay.model.Wallet;
+import com.example.securePay.repository.TransactionDAO;
+import com.example.securePay.repository.WalletDAO;
+import javax.transaction.TransactionalException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class TransactionServiceImpl implements TransactionService {
+
+	@Autowired
+	private TransactionDAO transactionDAO;
+	@Autowired
+	private WalletDAO walletDao;
+
+	@Override
+	public TransactionDTO addTranscation(TransactionDTO tean) throws TransactionalException, TransactionException {
+		// TODO Auto-generated method stub
+		if (tean == null) {
+
+			throw new TransactionException("please send correct details...");
+		}
+
+		Wallet wallet = walletDao.findById(tean.getWalletid()).get();
+
+		if (tean.getWalletid() != wallet.getWid()) {
+
+			throw new TransactionException("Invalid wallet id...");
+		}
+
+		if (wallet.getBalance() < tean.getAmount()) {
+
+			throw new TransactionException("Insufficent balance for transaction...");
+		}
+
+		wallet.setBalance(wallet.getBalance() - tean.getAmount());
+
+		Transaction trans = new Transaction();
+		trans.setAmount(tean.getAmount());
+		trans.setTransactionType(tean.getTransactionType());
+		trans.setDescription(tean.getDescription());
+		trans.setWallet(wallet);
+
+		wallet.getTransactions().add(trans);
+
+		walletDao.save(wallet);
+
+		return tean;
+	}
+
+	@Override
+	public List<Transaction> viewTransactionByDate(String from, String to)
+			throws TransactionalException, TransactionException {
+		// TODO Auto-generated method stub
+//		DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+		LocalDate localDate = LocalDate.parse(from);
+		LocalDate localDate1 = LocalDate.parse(to);
+		List<Transaction> list = transactionDAO.viewTransactionByDate(localDate, localDate1);
+		if (list.size() == 0) {
+			throw new TransactionException("No Transcation done between  these dates");
+		}
+
+		return list;
+	}
+
+	@Override
+	public List<Transaction> viewTransactionByWallet(Integer wallet_id)
+			throws TransactionalException, TransactionException {
+		// TODO Auto-generated method stub
+		List<Transaction> list = transactionDAO.findByWalletid(wallet_id);
+
+		if (list.size() == 0) {
+			throw new TransactionException("No Transcation done between  these dates");
+		}
+
+		return list;
+	}
+
+	@Override
+	public List<Transaction> viewALLTransaction(String type) throws TransactionalException, TransactionException {
+		// TODO Auto-generated method stub
+		List<Transaction> list = transactionDAO.findByTransactionType(type);
+
+		if (list.size() == 0) {
+			throw new TransactionException("No Transcation done between  these dates");
+		}
+
+		return list;
+
+	}
+
+}
